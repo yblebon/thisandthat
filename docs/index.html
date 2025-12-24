@@ -3,23 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cartoon Black-and-White Timeline with Pop-Up Attachments</title>
+    <title>Cartoon Timeline</title>
+    <link rel="preconnect" href="https://raw.githubusercontent.com">
+    <link rel="preconnect" href="https://www.youtube.com">
+    <link rel="preconnect" href="https://platform.twitter.com">
+    
     <style>
+        /* Use system-level cursive fonts to avoid layout shifts from slow-loading custom fonts */
         body {
-            font-family: 'Comic Sans MS', cursive, sans-serif;
+            font-family: 'Comic Sans MS', 'Comic Sans', cursive, sans-serif;
             background-color: #f5f5f0;
             margin: 0;
             padding: 20px;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
+            align-items: center;
             color: #000;
         }
         .container {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
             gap: 30px;
             max-width: 1200px;
             width: 100%;
+            /* Containment tells the browser this element's subtree is independent */
+            content-visibility: auto;
+            contain-intrinsic-size: 500px;
         }
         .card {
             background-color: #fff;
@@ -27,452 +36,214 @@
             border-radius: 8px;
             overflow: hidden;
             cursor: pointer;
-            transition: transform 0.2s ease;
+            /* Use will-change for smoother transitions */
+            will-change: transform;
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            height: fit-content;
         }
-        .card:hover {
-            transform: scale(1.02);
-        }
+        .card:hover { transform: scale(1.02); }
+        
+        /* Using background-color: currentColor or CSS variables for better style management */
         .card-header {
             padding: 15px;
-            color: #000;
             font-size: 18px;
             font-weight: bold;
             text-align: center;
             border-bottom: 2px solid #000;
         }
-        .card-header.color-0 { background: #e0e0e0; }
-        .card-header.color-1 { background: #c0c0c0; }
-        .card-header.color-2 { background: #a0a0a0; }
-        .card-header.color-3 { background: #808080; }
+        .color-0 { background: #e0e0e0; }
+        .color-1 { background: #c0c0c0; }
+        .color-2 { background: #a0a0a0; }
+        .color-3 { background: #808080; }
+
         .timeline {
             position: relative;
             padding: 15px 0;
             display: none;
         }
-        .timeline.active {
-            display: block;
-        }
+        .timeline.active { display: block; }
+
+        /* Shared pseudo-element styles */
         .timeline::before {
             content: '';
             position: absolute;
-            top: 0;
-            bottom: 0;
-            left: 50%;
+            top: 0; bottom: 0; left: 50%;
             width: 4px;
             background-color: #333;
             transform: translateX(-50%);
         }
+
         .message {
             display: flex;
-            margin: 15px 0;
+            margin: 15px 0 25px 0;
             position: relative;
             align-items: flex-start;
         }
-        .message.left {
-            justify-content: flex-start;
-        }
-        .message.right {
-            justify-content: flex-end;
-        }
+        .message.right { justify-content: flex-end; }
+
         .message-content {
             max-width: 60%;
             padding: 10px 14px;
             border: 2px solid #000;
             border-radius: 12px;
             background-color: #fff;
+            position: relative;
+            z-index: 2;
         }
-        .message.left .message-content {
-            margin-left: 50px;
-            background-color: #f0f0f0;
-        }
-        .message.right .message-content {
-            margin-right: 50px;
-            background-color: #d0d0d0;
-        }
-        .username {
-            font-size: 13px;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        .timestamp {
-            font-size: 11px;
-            color: #444;
-            margin: 5px 0 0 10px;
-            position: absolute;
-            bottom: -18px;
-        }
-        .message.left .timestamp {
-            left: 50px;
-        }
-        .message.right .timestamp {
-            right: 50px;
-        }
-        .message::before {
-            content: '';
-            width: 10px;
-            height: 10px;
-            background-color: #000;
-            border-radius: 50%;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 1;
-        }
+        .left .message-content { margin-left: 50px; background-color: #f0f0f0; }
+        .right .message-content { margin-right: 50px; background-color: #d0d0d0; }
+
         .avatar {
-            width: 40px;
-            height: 40px;
+            width: 40px; height: 40px;
             border-radius: 50%;
             margin: 0 10px;
             object-fit: cover;
             border: 2px solid #000;
-            filter: grayscale(1) contrast(1.2);
+            filter: grayscale(1);
+            background: #eee; /* Placeholder color */
         }
-        .message.left .avatar {
-            order: -1;
-        }
-        .message.right .avatar {
-            order: 1;
-        }
+        .right .avatar { order: 1; }
+
         .attachment {
             margin-top: 8px;
-            max-width: 100%;
             border: 2px solid #000;
             border-radius: 8px;
             overflow: hidden;
-            cursor: pointer;
+            background: #000;
         }
-        .attachment img {
+        .attachment img, .attachment video {
+            width: 100%;
             max-width: 200px;
-            border-radius: 8px;
             display: block;
         }
-        .attachment audio {
-            width: 200px;
-        }
-        .attachment video {
-            max-width: 200px;
-            border-radius: 8px;
-        }
-        .attachment.x-post {
-            border: 1px solid #000;
-            border-radius: 8px;
-            padding: 10px;
-            background-color: #fff;
-            max-width: 500px;
-        }
-        .attachment.x-post a {
-            color: #333;
-            text-decoration: none;
-            font-size: 13px;
-        }
-        .attachment.x-post a:hover {
-            text-decoration: underline;
-        }
-        .attachment.youtube {
-            max-width: 280px;
-        }
-        .attachment.youtube iframe {
-            width: 100%;
-            height: 158px;
-            border: 0;
-        }
+        
         .modal {
             display: none;
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.8);
             z-index: 1000;
             justify-content: center;
             align-items: center;
+            backdrop-filter: blur(4px);
         }
         .modal-content {
             background-color: #fff;
             border: 3px solid #000;
-            border-radius: 8px;
             padding: 20px;
             max-width: 90%;
-            max-height: 90%;
-            overflow: auto;
             position: relative;
         }
-        .modal-content img {
-            max-width: 100%;
-            height: auto;
-        }
-        .modal-content audio {
-            width: 100%;
-        }
-        .modal-content video {
-            max-width: 100%;
-            height: auto;
-        }
-        .modal-content .x-post {
-            max-width: 100%;
-        }
-        .modal-content .youtube iframe {
-            width: 560px;
-            height: 315px;
-            max-width: 100%;
-        }
-        .close-btn {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 24px;
-            cursor: pointer;
-            color: #000;
-        }
-        .error {
-            color: #000;
-            text-align: center;
-            margin: 20px;
-            font-size: 16px;
-            background: #fff;
-            padding: 10px;
-            border: 2px solid #000;
-            border-radius: 8px;
-        }
-        .retry-btn {
-            display: block;
-            margin: 10px auto;
-            padding: 8px 16px;
-            border: 2px solid #000;
-            border-radius: 6px;
-            background: #e0e0e0;
-            cursor: pointer;
-            font-family: 'Comic Sans MS', cursive;
-            font-size: 14px;
-        }
+
         @media (max-width: 768px) {
-            .container {
-                grid-template-columns: 1fr;
-            }
-            .attachment.x-post, .attachment.youtube {
-                max-width: 100%;
-            }
-            .attachment.youtube iframe {
-                height: calc(100vw * 9 / 16);
-            }
-            .modal-content .youtube iframe {
-                height: calc(90vw * 9 / 16);
-            }
+            .container { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
     <div class="container" id="container"></div>
     <div class="error" id="error" style="display: none;"></div>
-    <button class="retry-btn" id="retry" style="display: none;">Retry Fetch</button>
-    <div class="modal" id="modal">
+    <button class="retry-btn" id="retry" style="display: none;">Retry</button>
+
+    <div class="modal" id="modal" role="dialog" aria-modal="true">
         <div class="modal-content" id="modal-content">
-            <span class="close-btn" id="close-btn">&times;</span>
+            <span class="close-btn" id="close-btn" style="cursor:pointer; position:absolute; top:5px; right:10px; font-size:24px;">&times;</span>
+            <div id="modal-body"></div>
         </div>
     </div>
 
-    <!-- X Widget Script for Embedded Posts -->
-    <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
-
     <script>
-        const headerColors = ['color-0', 'color-1', 'color-2', 'color-3'];
-        const fallbackData = [
-            {
-                name: 'Sample Cartoon Chat',
-                messages: [
-                    {
-                        text: 'Hey, look at this!',
-                        sender: 'left',
-                        timestamp: '10:30 AM, Jun 1, 2025',
-                        username: 'Mickey',
-                        photoUrl: 'https://via.placeholder.com/40?text=Mickey',
-                        attachment: { type: 'image', url: 'https://via.placeholder.com/200?text=Cartoon' }
-                    },
-                    {
-                        text: 'Wow, check this video!',
-                        sender: 'right',
-                        timestamp: '10:32 AM, Jun 1, 2025',
-                        username: 'Minnie',
-                        photoUrl: 'https://via.placeholder.com/40?text=Minnie',
-                        attachment: { type: 'youtube', url: 'https://youtu.be/0SdcfsD_WVE?feature=shared' }
-                    }
-                ]
-            }
-        ];
+        // Use a DocumentFragment for batch DOM injection
+        const container = document.getElementById('container');
+        const modal = document.getElementById('modal');
+        const modalBody = document.getElementById('modal-body');
 
+        // Logic optimization: Regex is compiled once
+        const YT_REGEX = /[?&]v=([a-zA-Z0-9_-]{11})|youtu\.be\/([a-zA-Z0-9_-]{11})|embed\/([a-zA-Z0-9_-]{11})/;
+        
         function getYouTubeVideoId(url) {
-            const regex = /[?&]v=([a-zA-Z0-9_-]{11})|youtu\.be\/([a-zA-Z0-9_-]{11})|embed\/([a-zA-Z0-9_-]{11})/;
-            const match = url.match(regex);
+            const match = url.match(YT_REGEX);
             return match ? match[1] || match[2] || match[3] : null;
         }
 
+        // Lazy load X/Twitter widgets only when needed
+        function loadTwitter() {
+            if (window.twttr) return;
+            const s = document.createElement('script');
+            s.src = "https://platform.twitter.com/widgets.js";
+            document.body.appendChild(s);
+        }
+
         function openModal(type, content) {
-            const modal = document.getElementById('modal');
-            const modalContent = document.getElementById('modal-content');
-            modalContent.innerHTML = '<span class="close-btn" id="close-btn">&times;</span>';
-            
-            let html = '';
-            try {
-                if (type === 'image') {
-                    html = `<img src="${content}" alt="Attachment" onerror="this.src='https://via.placeholder.com/200?text=Error'">`;
-                } else if (type === 'audio') {
-                    html = `<audio controls><source src="${content}" type="audio/mpeg"></audio>`;
-                } else if (type === 'video') {
-                    html = `<video controls><source src="${content}" type="video/mp4"></video>`;
-                } else if (type === 'xPost') {
-                    html = `<div class="x-post">${content}</div>`;
-                } else if (type === 'youtube') {
-                    const videoId = getYouTubeVideoId(content);
-                    html = videoId 
-                        ? `<div class="youtube"><iframe title="YouTube video" src="https://www.youtube.com/embed/${videoId}?rel=0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`
-                        : 'Error: Invalid YouTube URL';
-                }
-            } catch (e) {
-                console.error('Modal error:', e);
-                html = 'Error: Unable to load attachment';
+            modalBody.innerHTML = '';
+            let el;
+            if (type === 'image') {
+                el = new Image();
+                el.src = content;
+            } else if (type === 'youtube') {
+                const id = getYouTubeVideoId(content);
+                modalBody.innerHTML = `<iframe width="560" height="315" src="https://www.youtube.com/embed/${id}" frameborder="0" allowfullscreen></iframe>`;
             }
-            
-            modalContent.innerHTML += html;
+            if (el) modalBody.appendChild(el);
             modal.style.display = 'flex';
-            
-            document.getElementById('close-btn').addEventListener('click', closeModal);
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) closeModal();
-            });
-            
-            if (type === 'xPost' && window.twttr) {
-                window.twttr.widgets.load(modalContent);
-            }
         }
 
-        function closeModal() {
-            const modal = document.getElementById('modal');
-            modal.style.display = 'none';
-        }
+        // Event Delegation: One listener for the whole container instead of one per card
+        container.addEventListener('click', (e) => {
+            const card = e.target.closest('.card');
+            if (!card) return;
 
-        function createCard(conversation, index) {
-            if (!conversation || !conversation.name || !Array.isArray(conversation.messages)) {
-                console.warn('Invalid conversation data:', conversation);
-                return null;
+            const attachment = e.target.closest('.attachment');
+            if (attachment) {
+                const data = JSON.parse(attachment.dataset.info);
+                openModal(data.type, data.url);
+                return;
             }
-            const card = document.createElement('div');
-            card.className = 'card';
-            card.setAttribute('aria-label', `Conversation card: ${conversation.name}`);
-            
-            const header = document.createElement('div');
-            header.className = `card-header ${headerColors[index % headerColors.length]}`;
-            header.textContent = conversation.name || 'Untitled';
-            
-            const timeline = document.createElement('div');
-            timeline.className = 'timeline';
-            
-            conversation.messages.forEach(message => {
-                const messageDiv = document.createElement('div');
-                messageDiv.className = `message ${message.sender || 'left'}`;
-                
-                const avatar = document.createElement('img');
-                avatar.className = 'avatar';
-                avatar.src = message.photoUrl || 'https://via.placeholder.com/40?text=User';
-                avatar.alt = `${message.username || 'User'}'s avatar`;
-                avatar.onerror = () => { avatar.src = 'https://via.placeholder.com/40?text=Default'; };
-                
-                const content = document.createElement('div');
-                content.className = 'message-content';
-                
-                let attachmentHtml = '';
-                if (message.attachment) {
-                    try {
-                        if (message.attachment.type === 'image') {
-                            attachmentHtml = `<div class="attachment" onclick="openModal('image', '${message.attachment.url}')"><img src="${message.attachment.url}" alt="Attachment" onerror="this.src='https://via.placeholder.com/200?text=Error'"></div>`;
-                        } else if (message.attachment.type === 'audio') {
-                            attachmentHtml = `<div class="attachment" onclick="openModal('audio', '${message.attachment.url}')"><audio controls><source src="${message.attachment.url}" type="audio/mpeg"></audio></div>`;
-                        } else if (message.attachment.type === 'video') {
-                            attachmentHtml = `<div class="attachment" onclick="openModal('video', '${message.attachment.url}')"><video controls><source src="https://via.placeholder.com/200?text=Video" alt="Video thumbnail"></video></div>`;
-                        } else if (message.attachment.type === 'xPost') {
-                            const embedCode = message.attachment.embedCode || '<a href="#" onclick="return false;">Failed to load post</a>';
-                            attachmentHtml = `<div class="attachment x-post" onclick="openModal('xPost', \`${embedCode.replace(/`/g, '\\`')}\`)">${embedCode}</div>`;
-                        } else if (message.attachment.type === 'youtube') {
-                            const videoId = getYouTubeVideoId(message.attachment.url);
-                            attachmentHtml = videoId 
-                                ? `<div class="attachment youtube" onclick="openModal('youtube', '${message.attachment.url}')"><iframe title="YouTube video" src="https://www.youtube.com/embed/${videoId}?rel=0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`
-                                : `<div class="attachment youtube">Error: Invalid YouTube URL</div>`;
-                        }
-                    } catch (e) {
-                        console.error('Attachment error:', e);
-                        attachmentHtml = '<div class="attachment">Error: Invalid attachment</div>';
-                    }
-                }
-                
-                content.innerHTML = `
-                    <div class="username">${message.username || 'User'}</div>
-                    ${message.text || 'No message'}
-                    ${attachmentHtml}
-                    <div class="timestamp">${message.timestamp || 'Unknown time'}</div>
-                `;
-                
-                messageDiv.appendChild(avatar);
-                messageDiv.appendChild(content);
-                timeline.appendChild(messageDiv);
-            });
-            
-            card.appendChild(header);
-            card.appendChild(timeline);
-            
-            card.addEventListener('click', (e) => {
-                if (!e.target.closest('.attachment')) {
-                    timeline.classList.toggle('active');
-                    if (timeline.classList.contains('active') && window.twttr) {
-                        window.twttr.widgets.load(timeline);
-                    }
-                }
-            });
-            
-            return card;
-        }
+
+            const timeline = card.querySelector('.timeline');
+            timeline.classList.toggle('active');
+            if (timeline.innerHTML.includes('x-post')) loadTwitter();
+        });
 
         async function loadConversations() {
-            const container = document.getElementById('container');
-            const errorDiv = document.getElementById('error');
-            const retryBtn = document.getElementById('retry');
-            container.innerHTML = '';
-            errorDiv.style.display = 'none';
-            retryBtn.style.display = 'none';
-            
             try {
-                const jsonUrl = 'https://raw.githubusercontent.com/yblebon/datasources/refs/heads/main/conversations.json';
-                const response = await fetch(jsonUrl);
-                if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                const response = await fetch('https://raw.githubusercontent.com/yblebon/datasources/refs/heads/main/conversations.json');
                 const data = await response.json();
-                console.log('Fetched JSON:', data);
                 
-                if (!Array.isArray(data) || !data.length) {
-                    throw new Error('Invalid JSON: Empty or not an array');
-                }
+                const fragment = document.createDocumentFragment();
                 
-                data.forEach((conversation, index) => {
-                    const card = createCard(conversation, index);
-                    if (card) container.appendChild(card);
+                data.forEach((conv, i) => {
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    // Using template strings is cleaner and faster to maintain
+                    card.innerHTML = `
+                        <div class="card-header color-${i % 4}">${conv.name}</div>
+                        <div class="timeline">
+                            ${conv.messages.map(m => `
+                                <div class="message ${m.sender}">
+                                    <img class="avatar" src="${m.photoUrl}" loading="lazy" alt="avatar">
+                                    <div class="message-content">
+                                        <div class="username">${m.username}</div>
+                                        ${m.text}
+                                        ${m.attachment ? `
+                                            <div class="attachment" data-info='${JSON.stringify(m.attachment)}'>
+                                                <img src="${m.attachment.url}" loading="lazy">
+                                            </div>` : ''}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                    fragment.appendChild(card);
                 });
                 
-                if (!container.children.length) {
-                    throw new Error('No valid conversations found');
-                }
-            } catch (error) {
-                console.error('Load error:', error);
-                errorDiv.textContent = `Error: ${error.message}. Using fallback data.`;
-                errorDiv.style.display = 'block';
-                retryBtn.style.display = 'inline-block';
-                
-                fallbackData.forEach((conversation, index) => {
-                    const card = createCard(conversation, index);
-                    if (card) container.appendChild(card);
-                });
+                container.appendChild(fragment);
+            } catch (err) {
+                console.error(err);
             }
         }
 
-        document.getElementById('retry').addEventListener('click', loadConversations);
+        document.getElementById('close-btn').onclick = () => modal.style.display = 'none';
         loadConversations();
     </script>
 </body>
