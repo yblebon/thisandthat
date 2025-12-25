@@ -3,99 +3,115 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cartoon Timeline - Sticky Stack Mode</title>
+    <title>Comic Timeline - Split View (Adaptive Alignment)</title>
     <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
     <style>
         :root {
             --bg-color: #fafaf9; --text-color: #1a1a1a; --card-bg: #ffffff;
-            --border-color: #000000; --accent-yellow: #fef08a; --accent-red: #ef4444;
-            --header-height: 60px;
+            --border-color: #000000; --accent-red: #ef4444; --sidebar-width: 320px;
         }
         body.dark-mode { --bg-color: #121212; --text-color: #fbbf24; --card-bg: #1e1e1e; --border-color: #fbbf24; }
         
-        body { font-family: 'Comic Sans MS', cursive; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        
-        .container { 
-            display: flex; flex-direction: column; gap: 20px; 
-            width: 100%; max-width: 800px; margin-top: 40px; 
-            padding-bottom: 60vh; 
-        }
-        
-        /* THE KEY: STICKY HEADERS */
-        .card { 
-            background: var(--card-bg); border: 2px solid var(--border-color); border-radius: 8px; 
-            box-shadow: 6px 6px 0px var(--border-color); overflow: visible; height: fit-content;
-        }
-        
-        .card-header { 
-            position: sticky; 
-            top: 0; /* They will stack at the top of the viewport */
-            z-index: 10;
-            padding: 15px 20px; border-bottom: 2px solid var(--border-color); 
-            display: flex; justify-content: space-between; align-items: center; 
-            font-weight: 900; text-transform: uppercase; cursor: pointer; 
-            background: var(--card-bg); /* Must be solid to cover content behind it */
+        body, html { height: 100%; margin: 0; font-family: 'Comic Sans MS', cursive; background: var(--bg-color); color: var(--text-color); overflow: hidden; }
+
+        /* MAIN LAYOUT */
+        .app-container {
+            display: grid;
+            grid-template-columns: var(--sidebar-width) 1fr;
+            height: 100vh;
         }
 
-        .status-badge {
-            font-size: 0.7rem; border: 2px solid var(--border-color); 
-            padding: 2px 8px; border-radius: 4px; background: var(--card-bg);
+        /* LEFT SIDEBAR */
+        .sidebar {
+            border-right: 3px solid var(--border-color);
+            overflow-y: auto; padding: 20px;
+            background: rgba(0,0,0,0.02);
+            display: flex; flex-direction: column; gap: 15px;
         }
 
-        .timeline { 
-            padding: 20px 15px; display: none; 
-            background-image: radial-gradient(var(--border-color) 0.5px, transparent 0.5px); 
-            background-size: 18px 18px; 
+        .story-item {
+            padding: 15px; border: 2px solid var(--border-color); border-radius: 8px;
+            background: var(--card-bg); cursor: pointer; font-weight: 900;
+            text-transform: uppercase; transition: 0.2s;
+            box-shadow: 4px 4px 0px var(--border-color);
         }
+        .story-item:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0px var(--border-color); }
+        .story-item.active { background: var(--accent-red); color: white; transform: translate(2px, 2px); box-shadow: 0px 0px 0px var(--border-color); }
+
+        /* RIGHT PANEL */
+        .content-panel {
+            overflow-y: auto; padding: 40px;
+            display: flex; flex-direction: column; align-items: center;
+            background-image: radial-gradient(var(--border-color) 0.5px, transparent 0.5px);
+            background-size: 20px 20px;
+        }
+
+        #empty-state { margin-top: 20vh; text-align: center; opacity: 0.5; }
+
+        .timeline { width: 100%; max-width: 650px; display: none; }
         .timeline.active { display: block; }
 
-        /* BUBBLES */
-        .message { display: flex; margin-bottom: 25px; gap: 12px; }
-        .message.left { flex-direction: row; }
-        .message.right { flex-direction: row-reverse; }
-        .avatar { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--border-color); flex-shrink: 0; background: #eee; }
-        .message-content { max-width: 80%; padding: 10px 14px; border: 2px solid var(--border-color); border-radius: 12px; background: var(--card-bg); box-shadow: 3px 3px 0px var(--border-color); position: relative; }
+        /* BUBBLES - ADAPTIVE ALIGNMENT */
+        .message { display: flex; margin-bottom: 30px; gap: 12px; width: 100%; }
+        
+        /* Sender Left */
+        .message.left { flex-direction: row; justify-content: flex-start; }
+        /* Sender Right */
+        .message.right { flex-direction: row-reverse; justify-content: flex-start; }
 
+        .avatar { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--border-color); flex-shrink: 0; background: #eee; object-fit: cover; }
+        
+        .message-content { 
+            max-width: 75%; padding: 12px 16px; border: 2px solid var(--border-color); 
+            border-radius: 12px; background: var(--card-bg); box-shadow: 4px 4px 0px var(--border-color); 
+            position: relative; color: var(--text-color);
+        }
+
+        /* Bubble Tails */
+        .message-content::after {
+            content: ''; position: absolute; top: 12px;
+            width: 0; height: 0; border: 8px solid transparent;
+        }
+        .message.left .message-content::after { left: -17px; border-right-color: var(--border-color); }
+        .message.right .message-content::after { right: -17px; border-left-color: var(--border-color); }
+
+        .message.right .message-content { text-align: right; }
+
+        /* MEDIA */
         .attachment { margin-top: 10px; border-radius: 4px; overflow: hidden; border: 1px solid var(--border-color); }
         .youtube-placeholder { width: 100%; aspect-ratio: 16/9; background: #000; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; font-weight: bold; }
-        iframe, video { width: 100%; aspect-ratio: 16/9; display: block; border: none; }
+        iframe, video, .attachment img { width: 100%; display: block; border: none; }
         audio { width: 100%; height: 40px; }
         
-        .username { font-weight: 900; font-size: 0.7rem; color: var(--accent-red); text-transform: uppercase; }
-        .dialog-date { font-size: 0.6rem; margin-top: 6px; opacity: 0.6; text-align: right; }
+        .username { font-weight: 900; font-size: 0.75rem; color: var(--accent-red); text-transform: uppercase; margin-bottom: 4px; }
+        .dialog-date { font-size: 0.65rem; margin-top: 8px; opacity: 0.6; }
+        .message.left .dialog-date { text-align: right; }
+        .message.right .dialog-date { text-align: left; }
     </style>
 </head>
 <body>
 
-    <h1 style="font-size: 2.5rem; text-align: center;">COMIC <span style="color: var(--accent-red);">TIMELINE</span></h1>
-    <div class="container" id="container"></div>
+    <div class="app-container">
+        <div class="sidebar" id="sidebar">
+            <h2 style="text-align: center; font-size: 1.2rem; border-bottom: 2px solid; padding-bottom: 10px;">STORIES</h2>
+        </div>
+
+        <div class="content-panel" id="content-panel">
+            <div id="empty-state">
+                <h1 style="font-size: 3rem;">COMIC <span style="color: var(--accent-red);">TIMELINE</span></h1>
+                <p>Select a story to begin reading.</p>
+            </div>
+            <div id="active-timeline-container" class="timeline"></div>
+        </div>
+    </div>
 
     <script>
+        let storiesData = [];
+
         function getYTId(url) {
             const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
             const match = url.match(regExp);
             return (match && match[2].length === 11) ? match[2] : null;
-        }
-
-        function stopMedia(container) {
-            container.querySelectorAll('video, audio').forEach(m => { m.pause(); m.currentTime = 0; });
-            container.querySelectorAll('.youtube-lite').forEach(wrapper => {
-                wrapper.innerHTML = `<div class="youtube-placeholder">▶ PLAY VIDEO</div>`;
-            });
-        }
-
-        function closeAllCards(exceptCard) {
-            document.querySelectorAll('.card').forEach(card => {
-                if (card !== exceptCard) {
-                    const timeline = card.querySelector('.timeline');
-                    const badge = card.querySelector('.status-badge');
-                    if (timeline.classList.contains('active')) {
-                        timeline.classList.remove('active');
-                        badge.textContent = 'OPEN';
-                        stopMedia(timeline);
-                    }
-                }
-            });
         }
 
         function createAttachmentHTML(attach) {
@@ -107,75 +123,64 @@
                     return ytId ? `<div class="attachment youtube-lite" data-ytid="${ytId}"><div class="youtube-placeholder">▶ PLAY VIDEO</div></div>` :
                                   `<div class="attachment"><video controls preload="none" src="${attach.url}"></video></div>`;
                 case 'audio': return `<div class="attachment"><audio controls preload="none" src="${attach.url}"></audio></div>`;
-                case 'image': return `<div class="attachment"><img src="${attach.url}" style="width:100%" loading="lazy"></div>`;
+                case 'image': return `<div class="attachment"><img src="${attach.url}" loading="lazy"></div>`;
                 case 'xpost': return `<div class="attachment">${attach.embedCode || ''}</div>`;
                 default: return '';
             }
         }
 
-        const container = document.getElementById('container');
+        function loadStory(index) {
+            const story = storiesData[index];
+            const container = document.getElementById('active-timeline-container');
+            const emptyState = document.getElementById('empty-state');
+            
+            emptyState.style.display = 'none';
+            container.classList.add('active');
+            
+            document.querySelectorAll('.story-item').forEach((el, idx) => {
+                el.classList.toggle('active', idx === index);
+            });
 
-        container.addEventListener('click', (e) => {
-            const card = e.target.closest('.card');
-            if (!card) return;
+            container.innerHTML = story.messages.map(m => {
+                // Determine side based on sender
+                const sideClass = (m.sender === 'right' || m.sender === 'me') ? 'right' : 'left';
+                
+                return `
+                    <div class="message ${sideClass}">
+                        <img class="avatar" src="${m.photoUrl}" loading="lazy">
+                        <div class="message-content">
+                            <div class="username">${m.username}</div>
+                            <div style="font-size: 0.95rem;">${m.text}</div>
+                            ${createAttachmentHTML(m.attachment)}
+                            <div class="dialog-date">${m.timestamp || ''}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
 
+            document.getElementById('content-panel').scrollTo({ top: 0, behavior: 'smooth' });
+            if (window.twttr) window.twttr.widgets.load(container);
+        }
+
+        document.addEventListener('click', (e) => {
             if (e.target.closest('.youtube-placeholder')) {
                 const wrapper = e.target.closest('.youtube-lite');
                 wrapper.innerHTML = `<iframe src="https://www.youtube.com/embed/${wrapper.dataset.ytid}?autoplay=1" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
-                return;
-            }
-
-            if (e.target.closest('.card-header')) {
-                const timeline = card.querySelector('.timeline');
-                const badge = card.querySelector('.status-badge');
-                const isOpening = !timeline.classList.contains('active');
-
-                if (isOpening) {
-                    closeAllCards(card);
-                    timeline.classList.add('active');
-                    badge.textContent = 'CLOSE';
-                    if (window.twttr) window.twttr.widgets.load(timeline);
-
-                    // CENTER LOGIC WITH STICKY AWARENESS
-                    setTimeout(() => {
-                        const cardTop = card.getBoundingClientRect().top + window.pageYOffset;
-                        const viewportHeight = window.innerHeight;
-                        // Subtracting a bit of height to account for the sticky headers at the top
-                        const targetPos = cardTop - (viewportHeight / 4); 
-
-                        window.scrollTo({ top: targetPos, behavior: 'smooth' });
-                    }, 100);
-                } else {
-                    timeline.classList.remove('active');
-                    badge.textContent = 'OPEN';
-                    stopMedia(timeline);
-                }
             }
         });
 
         async function init() {
             try {
                 const res = await fetch('https://raw.githubusercontent.com/yblebon/datasources/refs/heads/main/conversations.json');
-                const data = await res.json();
-                data.forEach((conv) => {
-                    const card = document.createElement('div');
-                    card.className = 'card';
-                    const messagesHTML = conv.messages.map(m => {
-                        const sideClass = (m.sender === 'right' || m.sender === 'me') ? 'right' : 'left';
-                        return `<div class="message ${sideClass}">
-                                    <img class="avatar" src="${m.photoUrl}" loading="lazy">
-                                    <div class="message-content">
-                                        <div class="username">${m.username}</div>
-                                        <div style="font-size: 0.9rem;">${m.text}</div>
-                                        ${createAttachmentHTML(m.attachment)}
-                                        <div class="dialog-date">${m.timestamp || ''}</div>
-                                    </div>
-                                </div>`;
-                    }).join('');
-
-                    card.innerHTML = `<div class="card-header"><span>${conv.name}</span><span class="status-badge">OPEN</span></div>
-                                      <div class="timeline">${messagesHTML}</div>`;
-                    container.appendChild(card);
+                storiesData = await res.json();
+                
+                const sidebar = document.getElementById('sidebar');
+                storiesData.forEach((story, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'story-item';
+                    div.textContent = story.name;
+                    div.onclick = () => loadStory(index);
+                    sidebar.appendChild(div);
                 });
             } catch (err) { console.error(err); }
         }
