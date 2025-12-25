@@ -3,279 +3,181 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cartoon Timeline - Noir Edition</title>
+    <title>Cartoon Timeline - Sticky Stack Mode</title>
     <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
     <style>
-        /* --- 1. VARIABLES & THEMES --- */
         :root {
-            --bg-color: #fafaf9;
-            --text-color: #1a1a1a;
-            --card-bg: #ffffff;
-            --border-color: #000000;
-            --accent-yellow: #fef08a;
-            --accent-red: #ef4444;
-            --header-bg: #ffffff;
+            --bg-color: #fafaf9; --text-color: #1a1a1a; --card-bg: #ffffff;
+            --border-color: #000000; --accent-yellow: #fef08a; --accent-red: #ef4444;
+            --header-height: 60px;
+        }
+        body.dark-mode { --bg-color: #121212; --text-color: #fbbf24; --card-bg: #1e1e1e; --border-color: #fbbf24; }
+        
+        body { font-family: 'Comic Sans MS', cursive; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        
+        .container { 
+            display: flex; flex-direction: column; gap: 20px; 
+            width: 100%; max-width: 800px; margin-top: 40px; 
+            padding-bottom: 60vh; 
+        }
+        
+        /* THE KEY: STICKY HEADERS */
+        .card { 
+            background: var(--card-bg); border: 2px solid var(--border-color); border-radius: 8px; 
+            box-shadow: 6px 6px 0px var(--border-color); overflow: visible; height: fit-content;
+        }
+        
+        .card-header { 
+            position: sticky; 
+            top: 0; /* They will stack at the top of the viewport */
+            z-index: 10;
+            padding: 15px 20px; border-bottom: 2px solid var(--border-color); 
+            display: flex; justify-content: space-between; align-items: center; 
+            font-weight: 900; text-transform: uppercase; cursor: pointer; 
+            background: var(--card-bg); /* Must be solid to cover content behind it */
         }
 
-        body.dark-mode {
-            --bg-color: #121212;
-            --text-color: #fbbf24;
-            --card-bg: #1e1e1e;
-            --border-color: #fbbf24;
-            --accent-yellow: #fbbf24;
-            --header-bg: #1e1e1e;
+        .status-badge {
+            font-size: 0.7rem; border: 2px solid var(--border-color); 
+            padding: 2px 8px; border-radius: 4px; background: var(--card-bg);
         }
 
-        /* --- 2. CORE LAYOUT --- */
-        body {
-            font-family: 'Comic Sans MS', 'Comic Sans', cursive, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            transition: all 0.3s ease;
-            margin: 0; padding: 20px;
-            display: flex; flex-direction: column; align-items: center;
-        }
-
-        #theme-toggle {
-            position: fixed; top: 20px; right: 20px;
-            padding: 8px 16px; background: var(--card-bg);
-            border: 2px solid var(--border-color);
-            color: var(--text-color);
-            font-weight: bold; cursor: pointer;
-            box-shadow: 3px 3px 0px var(--border-color);
-            z-index: 2000;
-        }
-
-        .container {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-            gap: 30px; max-width: 1200px; width: 100%;
-            margin-top: 40px;
-        }
-
-        /* --- 3. REFINED CARD STYLING --- */
-        .card {
-            background-color: var(--card-bg);
-            border: 2px solid var(--border-color);
-            border-radius: 8px;
-            box-shadow: 6px 6px 0px var(--border-color);
-            cursor: pointer; overflow: hidden;
-            transition: transform 0.2s ease;
-        }
-
-        .card-header {
-            padding: 15px 20px; font-size: 1.1rem; font-weight: 900;
-            border-bottom: 2px solid var(--border-color);
-            display: flex; justify-content: space-between; align-items: center;
-            background: var(--header-bg);
-            color: var(--text-color);
-            text-transform: uppercase;
-        }
-
-        /* --- 4. TIMELINE & BUBBLES --- */
-        .timeline {
-            padding: 20px 15px; display: none;
-            background-image: radial-gradient(var(--border-color) 0.5px, transparent 0.5px);
-            background-size: 18px 18px;
+        .timeline { 
+            padding: 20px 15px; display: none; 
+            background-image: radial-gradient(var(--border-color) 0.5px, transparent 0.5px); 
+            background-size: 18px 18px; 
         }
         .timeline.active { display: block; }
 
-        .message {
-            display: flex; margin-bottom: 25px; gap: 12px; width: 100%; box-sizing: border-box;
-        }
+        /* BUBBLES */
+        .message { display: flex; margin-bottom: 25px; gap: 12px; }
+        .message.left { flex-direction: row; }
+        .message.right { flex-direction: row-reverse; }
+        .avatar { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--border-color); flex-shrink: 0; background: #eee; }
+        .message-content { max-width: 80%; padding: 10px 14px; border: 2px solid var(--border-color); border-radius: 12px; background: var(--card-bg); box-shadow: 3px 3px 0px var(--border-color); position: relative; }
 
-        .message.left { flex-direction: row; justify-content: flex-start; }
-        .message.right { flex-direction: row-reverse; justify-content: flex-start; }
-
-        .avatar {
-            width: 44px; height: 44px; border-radius: 50%;
-            border: 2px solid var(--border-color);
-            background: #fff; flex-shrink: 0; object-fit: cover;
-        }
-
-        .message-content {
-            max-width: 80%; padding: 10px 14px;
-            border: 2px solid var(--border-color);
-            border-radius: 12px; background-color: var(--card-bg);
-            box-shadow: 3px 3px 0px var(--border-color);
-            position: relative; font-family: sans-serif;
-        }
-
-        /* Speech Bubble Tails */
-        .message-content::after {
-            content: ''; position: absolute; top: 12px;
-            width: 0; height: 0; border: 8px solid transparent;
-        }
-        .message.left .message-content::after { left: -17px; border-right-color: var(--border-color); }
-        .message.right .message-content::after { right: -17px; border-left-color: var(--border-color); }
-
-        /* Media Elements */
-        .attachment { margin-top: 10px; border-radius: 4px; overflow: hidden; }
-        .attachment img, .attachment video { width: 100%; border: 1px solid var(--border-color); display: block; }
+        .attachment { margin-top: 10px; border-radius: 4px; overflow: hidden; border: 1px solid var(--border-color); }
+        .youtube-placeholder { width: 100%; aspect-ratio: 16/9; background: #000; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; font-weight: bold; }
+        iframe, video { width: 100%; aspect-ratio: 16/9; display: block; border: none; }
+        audio { width: 100%; height: 40px; }
         
-        /* Audio Styling */
-        .attachment audio {
-            width: 100%;
-            height: 40px;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            background: #fff;
-            box-shadow: 2px 2px 0px var(--border-color);
-        }
-
-        /* X-Post styling */
-        .x-post-container {
-            min-width: 250px;
-            background: #fff;
-            border-radius: 12px;
-            margin-top: 10px;
-            border: 1px solid #e1e8ed;
-        }
-
-        .username { font-weight: 900; font-size: 0.7rem; margin-bottom: 4px; color: var(--accent-red); text-transform: uppercase; }
-        .dialog-date { font-size: 0.6rem; margin-top: 6px; opacity: 0.6; text-align: right; text-transform: uppercase; }
-
-        /* --- 5. MODAL --- */
-        .modal {
-            display: none; position: fixed; inset: 0;
-            background-color: rgba(0, 0, 0, 0.85);
-            z-index: 3000; justify-content: center; align-items: center;
-        }
-        .modal.show { display: flex; }
-        .modal-content {
-            background-color: var(--card-bg); border: 3px solid var(--border-color);
-            padding: 15px; position: relative; max-width: 85%; max-height: 85%; overflow: auto;
-        }
-        .close-btn {
-            position: absolute; top: -12px; right: -12px;
-            background: var(--accent-red); color: #fff;
-            border: 2px solid var(--border-color);
-            width: 30px; height: 30px; border-radius: 50%;
-            display: flex; justify-content: center; align-items: center; cursor: pointer;
-        }
+        .username { font-weight: 900; font-size: 0.7rem; color: var(--accent-red); text-transform: uppercase; }
+        .dialog-date { font-size: 0.6rem; margin-top: 6px; opacity: 0.6; text-align: right; }
     </style>
 </head>
 <body>
 
-    <button id="theme-toggle">SWITCH TO NOIR</button>
-    <h1 style="font-size: 2.5rem; text-align: center; margin-bottom: 0;">
-        COMIC <span style="color: var(--accent-red);">TIMELINE</span>
-    </h1>
-
+    <h1 style="font-size: 2.5rem; text-align: center;">COMIC <span style="color: var(--accent-red);">TIMELINE</span></h1>
     <div class="container" id="container"></div>
 
-    <div class="modal" id="modal">
-        <div class="modal-content">
-            <div class="close-btn" id="close-btn">X</div>
-            <div id="modal-body"></div>
-        </div>
-    </div>
-
     <script>
-        const toggle = document.getElementById('theme-toggle');
-        const container = document.getElementById('container');
-        const modal = document.getElementById('modal');
-        const modalBody = document.getElementById('modal-body');
+        function getYTId(url) {
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+            const match = url.match(regExp);
+            return (match && match[2].length === 11) ? match[2] : null;
+        }
 
-        toggle.addEventListener('click', () => {
-            document.body.classList.toggle('dark-mode');
-            toggle.textContent = document.body.classList.contains('dark-mode') ? 'SWITCH TO LIGHT' : 'SWITCH TO NOIR';
-            if (window.twttr) window.twttr.widgets.load();
-        });
+        function stopMedia(container) {
+            container.querySelectorAll('video, audio').forEach(m => { m.pause(); m.currentTime = 0; });
+            container.querySelectorAll('.youtube-lite').forEach(wrapper => {
+                wrapper.innerHTML = `<div class="youtube-placeholder">▶ PLAY VIDEO</div>`;
+            });
+        }
 
-        // REFINED ATTACHMENT LOGIC WITH AUDIO SUPPORT
+        function closeAllCards(exceptCard) {
+            document.querySelectorAll('.card').forEach(card => {
+                if (card !== exceptCard) {
+                    const timeline = card.querySelector('.timeline');
+                    const badge = card.querySelector('.status-badge');
+                    if (timeline.classList.contains('active')) {
+                        timeline.classList.remove('active');
+                        badge.textContent = 'OPEN';
+                        stopMedia(timeline);
+                    }
+                }
+            });
+        }
+
         function createAttachmentHTML(attach) {
-            if (!attach || !attach.type) return '';
-            
-            const type = attach.type.toLowerCase().replace('-', '');
-
+            if (!attach) return '';
+            const type = attach.type.toLowerCase();
             switch (type) {
-                case 'image':
-                    return `<div class="attachment" data-info='${JSON.stringify(attach)}'>
-                                <img src="${attach.url}" style="cursor: pointer;">
-                            </div>`;
                 case 'video':
-                    return `<div class="attachment">
-                                <video controls src="${attach.url}"></video>
-                            </div>`;
-                case 'audio':
-                    return `<div class="attachment">
-                                <audio controls>
-                                    <source src="${attach.url}" type="audio/mpeg">
-                                    Your browser does not support the audio element.
-                                </audio>
-                            </div>`;
-                case 'xpost':
-                case 'twitter':
-                    const content = attach.embedCode ? attach.embedCode : `<blockquote class="twitter-tweet"><a href="${attach.url}"></a></blockquote>`;
-                    return `<div class="attachment x-post-container">${content}</div>`;
-                default:
-                    return `<div class="attachment"><a href="${attach.url}" target="_blank" style="color:var(--accent-red); font-weight:bold;">View Link</a></div>`;
+                    const ytId = getYTId(attach.url);
+                    return ytId ? `<div class="attachment youtube-lite" data-ytid="${ytId}"><div class="youtube-placeholder">▶ PLAY VIDEO</div></div>` :
+                                  `<div class="attachment"><video controls preload="none" src="${attach.url}"></video></div>`;
+                case 'audio': return `<div class="attachment"><audio controls preload="none" src="${attach.url}"></audio></div>`;
+                case 'image': return `<div class="attachment"><img src="${attach.url}" style="width:100%" loading="lazy"></div>`;
+                case 'xpost': return `<div class="attachment">${attach.embedCode || ''}</div>`;
+                default: return '';
             }
         }
+
+        const container = document.getElementById('container');
 
         container.addEventListener('click', (e) => {
             const card = e.target.closest('.card');
             if (!card) return;
 
-            const attachment = e.target.closest('.attachment');
-            if (attachment && e.target.tagName === 'IMG') {
-                const data = JSON.parse(attachment.dataset.info);
-                modalBody.innerHTML = `<img src="${data.url}" style="max-width:100%; border:2px solid var(--border-color);">`;
-                modal.classList.add('show');
+            if (e.target.closest('.youtube-placeholder')) {
+                const wrapper = e.target.closest('.youtube-lite');
+                wrapper.innerHTML = `<iframe src="https://www.youtube.com/embed/${wrapper.dataset.ytid}?autoplay=1" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
                 return;
             }
 
-            if (!attachment) {
+            if (e.target.closest('.card-header')) {
                 const timeline = card.querySelector('.timeline');
-                timeline.classList.toggle('active');
-                
-                if (timeline.classList.contains('active') && window.twttr) {
-                    window.twttr.widgets.load(timeline);
+                const badge = card.querySelector('.status-badge');
+                const isOpening = !timeline.classList.contains('active');
+
+                if (isOpening) {
+                    closeAllCards(card);
+                    timeline.classList.add('active');
+                    badge.textContent = 'CLOSE';
+                    if (window.twttr) window.twttr.widgets.load(timeline);
+
+                    // CENTER LOGIC WITH STICKY AWARENESS
+                    setTimeout(() => {
+                        const cardTop = card.getBoundingClientRect().top + window.pageYOffset;
+                        const viewportHeight = window.innerHeight;
+                        // Subtracting a bit of height to account for the sticky headers at the top
+                        const targetPos = cardTop - (viewportHeight / 4); 
+
+                        window.scrollTo({ top: targetPos, behavior: 'smooth' });
+                    }, 100);
+                } else {
+                    timeline.classList.remove('active');
+                    badge.textContent = 'OPEN';
+                    stopMedia(timeline);
                 }
             }
         });
-
-        document.getElementById('close-btn').onclick = () => modal.classList.remove('show');
 
         async function init() {
             try {
                 const res = await fetch('https://raw.githubusercontent.com/yblebon/datasources/refs/heads/main/conversations.json');
                 const data = await res.json();
-                const fragment = document.createDocumentFragment();
-
                 data.forEach((conv) => {
                     const card = document.createElement('div');
                     card.className = 'card';
-                    
                     const messagesHTML = conv.messages.map(m => {
                         const sideClass = (m.sender === 'right' || m.sender === 'me') ? 'right' : 'left';
-                        return `
-                            <div class="message ${sideClass}">
-                                <img class="avatar" src="${m.photoUrl}" alt="${m.username}" loading="lazy">
-                                <div class="message-content">
-                                    <div class="username">${m.username}</div>
-                                    <div style="font-size: 0.95rem; line-height: 1.4;">${m.text}</div>
-                                    ${createAttachmentHTML(m.attachment)}
-                                    <div class="dialog-date">${m.timestamp || ''}</div>
-                                </div>
-                            </div>
-                        `;
+                        return `<div class="message ${sideClass}">
+                                    <img class="avatar" src="${m.photoUrl}" loading="lazy">
+                                    <div class="message-content">
+                                        <div class="username">${m.username}</div>
+                                        <div style="font-size: 0.9rem;">${m.text}</div>
+                                        ${createAttachmentHTML(m.attachment)}
+                                        <div class="dialog-date">${m.timestamp || ''}</div>
+                                    </div>
+                                </div>`;
                     }).join('');
 
-                    card.innerHTML = `
-                        <div class="card-header">
-                            <span>${conv.name}</span>
-                            <span style="font-size:0.8rem; opacity: 0.6;">OPEN</span>
-                        </div>
-                        <div class="timeline">${messagesHTML}</div>`;
-                    fragment.appendChild(card);
+                    card.innerHTML = `<div class="card-header"><span>${conv.name}</span><span class="status-badge">OPEN</span></div>
+                                      <div class="timeline">${messagesHTML}</div>`;
+                    container.appendChild(card);
                 });
-                container.appendChild(fragment);
-                
-                if (window.twttr) window.twttr.widgets.load();
-
-            } catch (err) { console.error("Error loading JSON:", err); }
+            } catch (err) { console.error(err); }
         }
         init();
     </script>
