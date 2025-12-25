@@ -3,91 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Comic Timeline - Classic Red & Black</title>
+    <title>Comic Timeline - Character Filter</title>
     <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
     <style>
         :root {
             --bg-color: #fafaf9; --text-color: #1a1a1a; --card-bg: #ffffff;
             --border-color: #000000; --accent-red: #ef4444;
-            --sidebar-width: 300px;
+            --sidebar-width: 280px;
             --comic-font: 'Comic Sans MS', 'Chalkboard SE', 'Comic Neue', cursive, sans-serif;
         }
         
         body, html { height: 100%; margin: 0; font-family: var(--comic-font); background: var(--bg-color); color: var(--text-color); overflow: hidden; }
+
+        .progress-container {
+            position: sticky; top: 0; left: 0; width: 100%; height: 6px;
+            background: rgba(0,0,0,0.05); z-index: 1000;
+        }
+        #read-progress { height: 100%; width: 0%; background: var(--accent-red); transition: width 0.1s ease-out; }
 
         .app-container { display: flex; height: 100vh; width: 100vw; }
 
         /* SIDEBAR */
         .sidebar {
             width: var(--sidebar-width); min-width: var(--sidebar-width);
-            border-right: 4px solid var(--border-color); overflow-y: auto; padding: 20px;
-            background: var(--bg-color); display: flex; flex-direction: column; gap: 15px; z-index: 900;
+            border-right: 4px solid var(--border-color); overflow-y: auto; padding: 15px;
+            background: var(--bg-color); display: flex; flex-direction: column; gap: 10px; z-index: 900;
         }
 
         .story-item {
-            padding: 15px; border: 3px solid var(--border-color); border-radius: 2px;
+            padding: 10px 15px; border: 3px solid var(--border-color); border-radius: 2px;
             background: var(--card-bg); cursor: pointer; font-weight: 900;
-            text-transform: uppercase; transition: 0.1s; box-shadow: 5px 5px 0px var(--border-color);
+            text-transform: uppercase; transition: 0.1s; box-shadow: 3px 3px 0px var(--border-color);
+            font-size: 0.85rem;
         }
-        .story-item:hover { transform: translate(-2px, -2px); box-shadow: 7px 7px 0px var(--border-color); }
-        .story-item.active { background: var(--accent-red); color: white; transform: translate(3px, 3px); box-shadow: 0px 0px 0px; }
+        .story-item.active { background: var(--accent-red); color: white; transform: translate(2px, 2px); box-shadow: 0px 0px 0px; }
 
         /* CONTENT PANEL */
         .content-panel {
-            flex-grow: 1; overflow-y: auto; padding: 40px 20px;
+            flex-grow: 1; overflow-y: auto; padding: 0 20px 40px 20px;
             display: flex; flex-direction: column; align-items: center;
             background-image: radial-gradient(var(--border-color) 0.8px, transparent 0.8px);
-            background-size: 25px 25px;
+            background-size: 25px 25px; scroll-behavior: smooth;
         }
 
-        .timeline { width: 100%; max-width: 600px; display: none; }
+        /* LEGEND WITH FILTERING */
+        .character-legend {
+            display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; 
+            margin: 20px 0; padding: 8px; width: 100%; max-width: 600px;
+            border: 2px solid var(--border-color); border-radius: 4px; background: #fff;
+            box-shadow: 3px 3px 0px var(--border-color);
+            max-height: 100px; overflow-y: auto;
+        }
+
+        .legend-pill { 
+            display: flex; align-items: center; gap: 5px; font-size: 0.65rem; font-weight: 900; 
+            background: #f8f8f8; padding: 4px 10px; border: 1px solid var(--border-color); 
+            border-radius: 12px; text-transform: uppercase; cursor: pointer; transition: 0.2s;
+        }
+        .legend-pill:hover { background: #eee; transform: translateY(-1px); }
+        .legend-pill.filtering { background: var(--accent-red); color: white; border-color: var(--border-color); }
+
+        .legend-avatar { width: 16px; height: 16px; border-radius: 50%; border: 1px solid #000; object-fit: cover; }
+
+        .timeline { width: 100%; max-width: 600px; display: none; margin-top: 10px; }
         .timeline.active { display: block; }
 
-        /* MESSAGES */
-        .message { display: flex; margin-bottom: 45px; gap: 15px; position: relative; width: 100%; }
+        /* MESSAGES & FILTERING STATES */
+        .message { display: flex; margin-bottom: 35px; gap: 12px; position: relative; width: 100%; transition: opacity 0.3s ease; }
         .message.left { flex-direction: row; }
         .message.right { flex-direction: row-reverse; }
 
-        .dialog-number {
-            position: absolute; top: -18px; font-size: 0.7rem; font-weight: 900;
-            background: var(--border-color); color: white; padding: 2px 10px;
-            border-radius: 2px; z-index: 5; text-transform: uppercase;
-        }
-        .message.left .dialog-number { left: 65px; }
-        .message.right .dialog-number { right: 65px; }
+        /* Dim messages when filtering */
+        .timeline.is-filtering .message { opacity: 0.15; }
+        .timeline.is-filtering .message.highlight { opacity: 1; }
 
-        .avatar { 
-            width: 50px; height: 50px; border: 3px solid var(--border-color); 
-            flex-shrink: 0; background: #eee; object-fit: cover;
+        .dialog-number {
+            position: absolute; top: -14px; font-size: 0.55rem; font-weight: 900;
+            background: var(--border-color); color: white; padding: 1px 6px; border-radius: 2px;
         }
+        .message.left .dialog-number { left: 55px; }
+        .message.right .dialog-number { right: 55px; }
+
+        .avatar { width: 44px; height: 44px; border: 2px solid var(--border-color); flex-shrink: 0; background: #eee; }
 
         .message-content { 
-            max-width: 75%; padding: 15px; border: 3px solid var(--border-color); 
-            border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
-            background: var(--card-bg); box-shadow: 6px 6px 0px var(--border-color); 
-            position: relative;
+            max-width: 75%; padding: 12px; border: 3px solid var(--border-color); 
+            border-radius: 20px 5px 20px 5px;
+            background: var(--card-bg); box-shadow: 4px 4px 0px var(--border-color); position: relative;
         }
-        .message.right .message-content { text-align: right; }
 
-        /* ATTACHMENTS */
-        .attachment { margin-top: 12px; border: 2px solid var(--border-color); border-radius: 4px; overflow: hidden; background: #000; }
-        .attachment img { width: 100%; display: block; }
-        .youtube-placeholder { width: 100%; aspect-ratio: 16/9; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; font-weight: bold; background: #000; }
-        iframe, video { width: 100%; aspect-ratio: 16/9; display: block; border: none; }
-        audio { width: 100%; height: 40px; margin-top: 10px; }
+        .username { font-weight: 900; font-size: 0.75rem; color: var(--accent-red); text-transform: uppercase; margin-bottom: 3px; }
         
-        .username { font-weight: 900; font-size: 0.8rem; color: var(--accent-red); text-transform: uppercase; margin-bottom: 5px; border-bottom: 1px solid #eee; }
-        .dialog-date { font-size: 0.6rem; margin-top: 10px; opacity: 0.5; }
-
         #menu-toggle {
-            display: none; position: fixed; top: 10px; left: 10px; z-index: 1000;
-            padding: 10px; background: var(--accent-red); color: white; border: 2px solid var(--border-color); 
-            font-weight: 900; cursor: pointer; box-shadow: 3px 3px 0px var(--border-color);
+            display: none; position: fixed; top: 10px; left: 10px; z-index: 1001;
+            padding: 8px 12px; background: var(--accent-red); color: white; border: 2px solid var(--border-color); font-weight: 900;
         }
 
         @media (max-width: 900px) { 
             #menu-toggle { display: block; } 
-            .sidebar { position: absolute; left: -310px; transition: 0.3s; height: 100%; } 
+            .sidebar { position: absolute; left: -300px; transition: 0.3s; height: 100%; } 
             .sidebar.open { left: 0; } 
         }
     </style>
@@ -98,87 +112,119 @@
 
     <div class="app-container">
         <div class="sidebar" id="sidebar">
-            <h2 style="text-align: center; font-size: 1.5rem; margin-bottom: 20px; border-bottom: 4px solid var(--border-color);">STORIES</h2>
+            <h2 style="text-align: center; border-bottom: 3px solid #000; padding-bottom: 5px; font-size: 1.2rem;">STORIES</h2>
         </div>
 
-        <div class="content-panel" id="content-panel">
+        <div class="content-panel" id="content-panel" onscroll="handleScroll()">
+            <div class="progress-container">
+                <div id="read-progress"></div>
+            </div>
+
             <div id="empty-state" style="text-align:center; margin-top: 20vh;">
-                <h1 style="font-size: 3.5rem; color: var(--text-color);">COMIC <span style="color: var(--accent-red);">TIMELINE</span></h1>
+                <h1>COMIC <span style="color: var(--accent-red);">TIMELINE</span></h1>
                 <p>Select a story to begin reading.</p>
             </div>
+            
+            <div id="story-header" style="display:none; width:100%; max-width:600px;">
+                <div class="character-legend" id="character-legend"></div>
+                <p id="filter-hint" style="font-size: 0.6rem; text-align: center; margin-top: -15px; opacity: 0.6;">Tip: Click a character to filter their lines</p>
+            </div>
+
             <div id="active-timeline-container" class="timeline"></div>
         </div>
     </div>
 
     <script>
         let storiesData = [];
+        let activeFilter = null;
+        const contentPanel = document.getElementById('content-panel');
         const sidebar = document.getElementById('sidebar');
-        const menuToggle = document.getElementById('menu-toggle');
-        menuToggle.onclick = () => sidebar.classList.toggle('open');
+        const progressBar = document.getElementById('read-progress');
 
-        function getYTId(url) {
-            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-            const match = url.match(regExp);
-            return (match && match[2].length === 11) ? match[2] : null;
+        document.getElementById('menu-toggle').onclick = () => sidebar.classList.toggle('open');
+
+        function handleScroll() {
+            const winScroll = contentPanel.scrollTop;
+            const height = contentPanel.scrollHeight - contentPanel.clientHeight;
+            progressBar.style.width = (height > 0) ? (winScroll / height) * 100 + "%" : "0%";
+        }
+
+        function toggleFilter(username) {
+            const container = document.getElementById('active-timeline-container');
+            const pills = document.querySelectorAll('.legend-pill');
+            
+            if (activeFilter === username) {
+                // Remove filter
+                activeFilter = null;
+                container.classList.remove('is-filtering');
+                pills.forEach(p => p.classList.remove('filtering'));
+            } else {
+                // Apply filter
+                activeFilter = username;
+                container.classList.add('is-filtering');
+                pills.forEach(p => {
+                    p.classList.toggle('filtering', p.dataset.user === username);
+                });
+                
+                // Mark messages to highlight
+                const messages = container.querySelectorAll('.message');
+                messages.forEach(msg => {
+                    msg.classList.toggle('highlight', msg.dataset.author === username);
+                });
+            }
         }
 
         function createAttachmentHTML(attach) {
             if (!attach) return '';
             const type = attach.type.toLowerCase();
-            switch (type) {
-                case 'video':
-                    const ytId = getYTId(attach.url);
-                    return ytId ? `<div class="attachment youtube-lite" data-ytid="${ytId}"><div class="youtube-placeholder">▶ PLAY VIDEO</div></div>` :
-                                  `<div class="attachment"><video controls preload="none" src="${attach.url}"></video></div>`;
-                case 'audio': 
-                    return `<div class="attachment" style="background:none; border:none;"><audio controls src="${attach.url}"></audio></div>`;
-                case 'image': 
-                    return `<div class="attachment"><img src="${attach.url}" loading="lazy"></div>`;
-                case 'xpost': 
-                    return `<div class="attachment-x" style="margin-top:10px;">${attach.embedCode || ''}</div>`;
-                default: return '';
-            }
+            const wrap = "margin-top:8px; border:2px solid #000;";
+            if (type === 'video') return `<div style="${wrap}"><video controls style="width:100%;display:block;" src="${attach.url}"></video></div>`;
+            if (type === 'image') return `<div style="${wrap}"><img src="${attach.url}" style="width:100%;display:block;" loading="lazy"></div>`;
+            if (type === 'audio') return `<div style="margin-top:8px;"><audio controls style="width:100%;" src="${attach.url}"></audio></div>`;
+            return '';
         }
 
         function loadStory(index) {
             const story = storiesData[index];
             const container = document.getElementById('active-timeline-container');
+            const legend = document.getElementById('character-legend');
+            
+            activeFilter = null; // Reset filter on new story
             document.getElementById('empty-state').style.display = 'none';
+            document.getElementById('story-header').style.display = 'block';
+            container.classList.remove('is-filtering');
             container.classList.add('active');
             
             if (window.innerWidth <= 900) sidebar.classList.remove('open');
             document.querySelectorAll('.story-item').forEach((el, idx) => el.classList.toggle('active', idx === index));
 
+            const charMap = new Map();
+            story.messages.forEach(m => { if (!charMap.has(m.username)) charMap.set(m.username, m.photoUrl); });
+
+            legend.innerHTML = Array.from(charMap).map(([name, img]) => `
+                <div class="legend-pill" data-user="${name}" onclick="toggleFilter('${name}')">
+                    <img src="${img}" class="legend-avatar" onerror="this.src='https://via.placeholder.com/16'">
+                    <span>${name}</span>
+                </div>
+            `).join('');
+
             container.innerHTML = story.messages.map((m, i) => {
                 const sideClass = (m.sender === 'right' || m.sender === 'me') ? 'right' : 'left';
                 return `
-                    <div class="message ${sideClass}">
-                        <div class="dialog-number">DIALOG #${i + 1}</div>
-                        <img class="avatar" src="${m.photoUrl}" onerror="this.src='https://via.placeholder.com/50'">
+                    <div class="message ${sideClass}" data-author="${m.username}">
+                        <div class="dialog-number">#${i + 1}</div>
+                        <img class="avatar" src="${m.photoUrl}" onerror="this.src='https://via.placeholder.com/44'">
                         <div class="message-content">
                             <div class="username">${m.username}</div>
-                            <div style="line-height: 1.4;">${m.text}</div>
+                            <div style="font-size: 0.95rem; line-height: 1.3;">${m.text}</div>
                             ${createAttachmentHTML(m.attachment)}
-                            <div class="dialog-date">${m.timestamp || ''}</div>
                         </div>
                     </div>`;
             }).join('');
 
-            document.getElementById('content-panel').scrollTo({ top: 0, behavior: 'smooth' });
-
-            if (window.twttr && window.twttr.widgets) {
-                window.twttr.widgets.load(container);
-            }
+            contentPanel.scrollTo({ top: 0 });
+            progressBar.style.width = "0%";
         }
-
-        document.addEventListener('click', (e) => {
-            const ytPlaceholder = e.target.closest('.youtube-placeholder');
-            if (ytPlaceholder) {
-                const wrapper = ytPlaceholder.parentElement;
-                const id = wrapper.dataset.ytid;
-                wrapper.innerHTML = `<iframe src="https://www.youtube.com/embed/${id}?autoplay=1" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
-            }
-        });
 
         async function init() {
             try {
@@ -191,7 +237,7 @@
                     div.onclick = () => loadStory(index);
                     sidebar.appendChild(div);
                 });
-            } catch (err) { console.error("Fetch Error:", err); }
+            } catch (err) { console.error(err); }
         }
         init();
     </script>
