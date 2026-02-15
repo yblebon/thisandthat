@@ -253,7 +253,7 @@
             width: 48px;
             height: 48px;
             border: 3px solid var(--border-color);
-            border-radius: 50%;           /* changed to circle for avatar look */
+            border-radius: 50%;
             flex-shrink: 0;
             background: #eee;
             display: flex;
@@ -341,7 +341,9 @@
             color: #444;
         }
 
-        /* Mobile adjustments remain the same – only avatar size changes */
+        /* ──────────────────────────────────────────────
+           MOBILE – COMPACT VERSION + HEADER FIX
+        ────────────────────────────────────────────── */
         @media (max-width: 900px) {
             .sidebar {
                 position: fixed;
@@ -511,8 +513,15 @@
 
         let deferredPrompt = null;
 
-        menuToggle.onclick = () => sidebar.classList.toggle('open');
-        closeSidebar.onclick = () => sidebar.classList.remove('open');
+        menuToggle.onclick = () => {
+            sidebar.classList.toggle('open');
+            menuToggle.style.display = sidebar.classList.contains('open') ? 'none' : 'flex';
+        };
+
+        closeSidebar.onclick = () => {
+            sidebar.classList.remove('open');
+            menuToggle.style.display = 'flex';
+        };
 
         contentPanel.onscroll = () => {
             const winScroll = contentPanel.scrollTop;
@@ -572,7 +581,6 @@
                 }
             });
 
-            // Legend with Lucide icons
             legend.innerHTML = Array.from(charMap.keys()).map(name => `
                 <div class="legend-pill" data-user="${name}" onclick="toggleFilter('${name}')">
                     <i data-lucide="circle-user" width="16" height="16"></i>
@@ -609,7 +617,7 @@
             contentPanel.scrollTo({ top: 0, behavior: 'instant' });
             progressBar.style.width = "0%";
 
-            lucide.createIcons();  // Re-init icons after dynamic content added
+            lucide.createIcons();
         }
 
         async function init() {
