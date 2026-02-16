@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0d1117" />
+  <meta name="color-scheme" content="dark" />
+  <title>Comic Timeline – Offline</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --button: #238636;
+      --button-hover: #2ea043;
+      --status: #6e7681;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+      padding: 2rem;
+      background: var(--bg);
+      color: var(--text);
+      text-align: center;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      line-height: 1.5;
+    }
+
+    h1 {
+      font-size: clamp(2.2rem, 9vw, 3rem);
+      margin: 0.4rem 0 1rem;
+      color: var(--accent);
+    }
+
+    p {
+      font-size: 1.15rem;
+      max-width: 500px;
+      margin: 1rem auto;
+      color: var(--muted);
+    }
+
+    .icon-container {
+      margin-bottom: 1.8rem;
+    }
+
+    .icon {
+      width: 128px;
+      height: 128px;
+      object-fit: contain;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.06);
+      padding: 12px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    button {
+      background: var(--button);
+      color: white;
+      border: none;
+      padding: 1rem 2.4rem;
+      font-size: 1.1rem;
+      font-weight: 500;
+      border-radius: 10px;
+      cursor: pointer;
+      margin: 1.8rem 0;
+      transition: all 0.2s ease;
+    }
+
+    button:hover,
+    button:focus-visible {
+      background: var(--button-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(46, 160, 67, 0.35);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .status {
+      font-size: 1rem;
+      color: var(--status);
+      margin-top: 2.5rem;
+      min-height: 1.5em;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { transition: none !important; transform: none !important; }
+    }
+
+    @media (max-width: 480px) {
+      body { padding: 1.5rem; }
+      h1 { font-size: 2.4rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="icon-container">
+    <img 
+      src="/icons/icon-192.png" 
+      alt="Comic Timeline app icon" 
+      class="icon"
+      width="128" 
+      height="128"
+      loading="eager"
+    />
+  </div>
+
+  <h1>You're Offline</h1>
+
+  <p>
+    No problem — your saved comics, timelines, and stories are still available!<br>
+    You can browse and enjoy everything you've loaded so far. Fresh content will sync when you're back online.
+  </p>
+
+  <button id="reloadBtn" type="button" aria-label="Reload to check your connection">
+    Try Reloading
+  </button>
+
+  <p class="status" id="status">Checking your connection...</p>
+
+  <script>
+    const reloadBtn = document.getElementById('reloadBtn');
+    const statusEl = document.getElementById('status');
+    let isChecking = true;
+
+    // Manual reload handler
+    reloadBtn.addEventListener('click', () => {
+      statusEl.textContent = 'Reloading now...';
+      window.location.reload();
+    });
+
+    // Fast native online event
+    window.addEventListener('online', () => {
+      if (isChecking) {
+        statusEl.textContent = 'Connection back! Reloading...';
+        isChecking = false;
+        window.location.reload();
+      }
+    });
+
+    // Polling fallback
+    async function checkConnection() {
+      if (!isChecking) return;
+
+      try {
+        const res = await fetch('.', {
+          method: 'HEAD',
+          cache: 'no-store',
+          mode: 'no-cors'  // More reliable in some offline edge cases
+        });
+
+        // 2xx–3xx usually means connectivity
+        if (res && (res.ok || (res.status >= 200 && res.status < 400))) {
+          statusEl.textContent = 'Back online! Reloading...';
+          isChecking = false;
+          window.location.reload();
+          return;
+        }
+      } catch {
+        // Network failure → still offline
+      }
+
+      // Update status with time for transparency
+      statusEl.textContent = `Still offline • Last checked: ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+      
+      setTimeout(checkConnection, 3200);  // Slight variation to avoid exact sync
+    }
+
+    checkConnection();
+
+    // Stop polling on unload (polite)
+    window.addEventListener('beforeunload', () => {
+      isChecking = false;
+    });
+  </script>
+</body>
+</html>
