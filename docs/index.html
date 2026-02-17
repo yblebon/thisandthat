@@ -5,11 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Comic Timeline</title>
     
-    <!-- PWA essentials -->
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#ef4444">
     
-    <!-- Lucide icons -->
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     
     <style>
@@ -19,6 +17,7 @@
             --card-bg: #ffffff;
             --border-color: #000000;
             --accent-red: #ef4444;
+            --comic-yellow: #ffde00;
             --sidebar-width: 280px;
             --comic-font: 'Comic Sans MS', 'Chalkboard SE', 'Comic Neue', cursive, sans-serif;
         }
@@ -278,6 +277,7 @@
             position: relative;
             word-wrap: break-word;
             line-height: 1.35;
+            margin-bottom: 12px;
         }
 
         .message-content::after {
@@ -305,6 +305,47 @@
             color: var(--accent-red);
             text-transform: uppercase;
             margin-bottom: 4px;
+        }
+
+        /* ──────────────────────────────────────────────
+           REFINED COMIC SHARE BUTTON
+        ────────────────────────────────────────────── */
+        .share-btn {
+            position: absolute;
+            bottom: -18px;
+            right: 15px;
+            background: var(--comic-yellow);
+            color: #000;
+            border: 3px solid var(--border-color);
+            padding: 4px 12px;
+            font-family: var(--comic-font);
+            font-size: 0.7rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            box-shadow: 4px 4px 0 var(--border-color);
+            clip-path: polygon(0% 15%, 15% 15%, 15% 0%, 85% 0%, 85% 15%, 100% 15%, 100% 85%, 85% 85%, 85% 100%, 15% 100%, 15% 85%, 0% 85%);
+            transition: all 0.1s ease-in-out;
+            z-index: 10;
+        }
+
+        .share-btn:hover {
+            background: #fff;
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0 var(--border-color);
+        }
+
+        .share-btn:active {
+            transform: translate(2px, 2px);
+            box-shadow: 0px 0px 0 var(--border-color);
+        }
+
+        .message.right .share-btn {
+            right: auto;
+            left: 15px;
         }
 
         #menu-toggle, #install-btn {
@@ -411,54 +452,6 @@
                 padding: 7px 11px;
             }
         }
-
-        @media (max-width: 480px) {
-            .sidebar {
-                padding: 12px 16px;
-            }
-
-            .sidebar-header h2 {
-                font-size: 0.95rem;
-            }
-
-            .story-item {
-                padding: 10px 12px;
-                font-size: 0.85rem;
-                gap: 10px;
-            }
-
-            .message {
-                margin-bottom: 24px;
-            }
-
-            .message-content {
-                max-width: 90%;
-                padding: 11px 14px;
-            }
-
-            .avatar {
-                width: 42px;
-                height: 42px;
-            }
-
-            .avatar i[data-lucide] {
-                width: 24px;
-                height: 24px;
-            }
-
-            .message.left  .dialog-number { left: 48px; }
-            .message.right .dialog-number { right: 48px; }
-
-            .dialog-number {
-                font-size: 0.58rem;
-            }
-        }
-
-        @media (max-width: 400px) {
-            .sidebar-header h2 {
-                font-size: 0.92rem;
-            }
-        }
     </style>
 </head>
 <body>
@@ -557,6 +550,46 @@
             return '';
         }
 
+        async function shareMessage(btn, m, uniqueId) {
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = 'Wait...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('https://content-sharer-ten.vercel.app/api/share', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: uniqueId,
+                        text: m.text,
+                        sender: m.sender,
+                        timestamp: m.timestamp,
+                        username: m.username,
+                        photoUrl: `https://via.placeholder.com/40?text=${m.username || 'User'}`,
+                        attachment: m.attachment
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success && data.link) {
+                    await navigator.clipboard.writeText(data.link);
+                    btn.style.background = "#4ade80"; // Success green
+                    btn.innerHTML = '<i data-lucide="check" width="14" height="14"></i> COPIED!';
+                    lucide.createIcons();
+                }
+            } catch (err) {
+                console.error("Share failed", err);
+                btn.innerHTML = 'ERROR!';
+            } finally {
+                setTimeout(() => {
+                    btn.innerHTML = originalHTML;
+                    btn.style.background = "";
+                    btn.disabled = false;
+                    lucide.createIcons();
+                }, 3000);
+            }
+        }
+
         function loadStory(index) {
             const story = storiesData[index];
             const container = document.getElementById('active-timeline-container');
@@ -577,7 +610,7 @@
             const charMap = new Map();
             story.messages.forEach(m => {
                 if (m.username && !charMap.has(m.username)) {
-                    charMap.set(m.username, true);  // we don't need photoUrl anymore
+                    charMap.set(m.username, true);
                 }
             });
 
@@ -595,6 +628,10 @@
                 const msgDiv = document.createElement('div');
                 msgDiv.className = `message ${sideClass}`;
                 msgDiv.dataset.author = m.username || 'Unknown';
+                
+                const storyId = story.name.toLowerCase().replace(/\s+/g, '-');
+                const uniqueId = `${storyId}-${i}`;
+
                 msgDiv.innerHTML = `
                     <div class="dialog-date">${m.timestamp || 'STORY START'}</div>
                     <div class="message-body">
@@ -604,8 +641,12 @@
                         </div>
                         <div class="message-content">
                             <div class="username">${m.username || 'Unknown'}</div>
-                            <div style="font-size:0.96rem; line-height:1.35;">${m.text || ''}</div>
+                            <div style="font-size:0.96rem; line-height:1.35; padding-bottom:15px;">${m.text || ''}</div>
                             ${createAttachmentHTML(m.attachment)}
+                            <button class="share-btn" onclick='shareMessage(this, ${JSON.stringify(m).replace(/'/g, "&apos;")}, "${uniqueId}")'>
+                                <i data-lucide="zap" width="14" height="14"></i>
+                                SHARE!
+                            </button>
                         </div>
                     </div>
                 `;
@@ -630,8 +671,6 @@
                 const text = await res.text();
                 storiesData = JSON.parse(text);
 
-                console.log("First story title:", storiesData[0]?.name);
-
                 const sidebarContent = document.getElementById('sidebar');
                 storiesData.forEach((story, index) => {
                     const div = document.createElement('div');
@@ -645,11 +684,10 @@
             } catch (err) {
                 console.error("Load failed:", err);
                 document.getElementById('sidebar').innerHTML += 
-                    '<p style="color:red; padding:16px; text-align:center;">Failed to load stories.<br>Please check your connection.</p>';
+                    '<p style="color:red; padding:16px; text-align:center;">Failed to load stories.</p>';
             }
         }
 
-        // Install prompt
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
@@ -659,19 +697,14 @@
         installBtn.onclick = async () => {
             if (deferredPrompt) {
                 deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                console.log(`Install outcome: ${outcome}`);
                 deferredPrompt = null;
                 installBtn.style.display = 'none';
             }
         };
 
-        // Service Worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(reg => console.log('Service Worker registered'))
-                    .catch(err => console.error('Service Worker failed', err));
+                navigator.serviceWorker.register('/sw.js').catch(err => console.error(err));
             });
         }
 
