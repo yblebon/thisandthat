@@ -2,14 +2,14 @@ const CACHE_NAME = 'comic-timeline-v3';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
-  '/offline.html',                    // Custom offline page
+  '/offline.html',
   '/manifest.json',
-  'https://unpkg.com/lucide@latest/dist/umd/lucide.min.js'
-  // → Add your CSS, JS bundles, fonts, logo SVGs, etc. here
+  '/icons/icon-192.png',                    // ← now pre-cached
+  'https://unpkg.com/lucide@0.574.0/dist/umd/lucide.min.js'  // ← pinned
 ];
 
 const DYNAMIC_CACHE = 'dynamic-v3';
-const MAX_DYNAMIC_ENTRIES = 70;       // Tune based on your average image/comic size
+const MAX_DYNAMIC_ENTRIES = 70;
 const MAX_AGE_DAYS = 30;
 
 const STATIC_PATHS = STATIC_ASSETS
@@ -19,13 +19,16 @@ const STATIC_PATHS = STATIC_ASSETS
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(async (cache) => {
-      // Loop through assets so one failure doesn't stop the rest
+      console.log('Opened cache, starting asset download...');
       return Promise.allSettled(
         STATIC_ASSETS.map(url => 
           cache.add(url).catch(err => console.error(`Failed to cache: ${url}`, err))
         )
       );
-    }).then(() => self.skipWaiting())
+    }).then(() => {
+      console.log('Install complete!');
+      return self.skipWaiting();
+    })
   );
 });
 
@@ -46,7 +49,6 @@ async function trimDynamicCache() {
     const cache = await caches.open(DYNAMIC_CACHE);
     const now = Date.now();
     const maxAgeMs = MAX_AGE_DAYS * 24 * 60 * 60 * 1000;
-
     const requests = await cache.keys();
     const toDelete = [];
 
@@ -55,9 +57,7 @@ async function trimDynamicCache() {
       if (res) {
         const dateHeader = res.headers.get('date');
         const cachedTime = dateHeader ? new Date(dateHeader).getTime() : now;
-        if (now - cachedTime > maxAgeMs) {
-          toDelete.push(req);
-        }
+        if (now - cachedTime > maxAgeMs) toDelete.push(req);
       }
     }
 
@@ -66,9 +66,7 @@ async function trimDynamicCache() {
     const remaining = await cache.keys();
     if (remaining.length > MAX_DYNAMIC_ENTRIES) {
       const excess = remaining.length - MAX_DYNAMIC_ENTRIES;
-      await Promise.all(
-        remaining.slice(0, excess).map(req => cache.delete(req))
-      );
+      await Promise.all(remaining.slice(0, excess).map(req => cache.delete(req)));
     }
   } catch (err) {
     console.warn('Cache trim failed:', err);
@@ -102,14 +100,12 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // 3. External static (e.g. lucide) – cache-first
+  // 3. External static (pinned lucide)
   if (STATIC_ASSETS.some(asset => url.href.startsWith(asset.split('?')[0]))) {
     event.respondWith(
       caches.match(event.request).then(cached => {
         return cached || fetch(event.request).then(res => {
-          if (res?.ok) {
-            caches.open(CACHE_NAME).then(cache => cache.put(event.request, res.clone()));
-          }
+          if (res?.ok) caches.open(CACHE_NAME).then(cache => cache.put(event.request, res.clone()));
           return res;
         });
       })
@@ -117,32 +113,37 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // 4. Stale-while-revalidate: conversations.json
+  // 4. Stale-while-revalidate for conversations.json (critical fix)
   if (url.href.includes('conversations.json')) {
     event.respondWith(
-      caches.open(DYNAMIC_CACHE).then(cache => {
-        return cache.match(event.request).then(cachedResponse => {
-          const fetchPromise = fetch(event.request).then(networkResponse => {
-            if (networkResponse?.status === 200) {
-              cache.put(event.request, networkResponse.clone());
-              trimDynamicCache();
-            }
-            return networkResponse;
-          }).catch(() => {
-            return cachedResponse || new Response(
-              'Offline – stories not cached yet',
-              { status: 503, statusText: 'Service Unavailable' }
-            );
-          });
+      (async () => {
+        const cache = await caches.open(DYNAMIC_CACHE);
+        const cached = await cache.match(event.request);
 
-          return cachedResponse || fetchPromise;
+        const fetchPromise = fetch(event.request).then(async res => {
+          if (res && res.status === 200) {
+            await cache.put(event.request, res.clone());
+            trimDynamicCache();
+          }
+          return res;
+        }).catch(() => {
+          return cached || new Response(
+            'Offline – stories not cached yet',
+            { status: 503, statusText: 'Service Unavailable' }
+          );
         });
-      })
+
+        if (cached) {
+          fetchPromise.catch(() => {}); // background update
+          return cached;
+        }
+        return fetchPromise;
+      })()
     );
     return;
   }
 
-  // 5. Images & comic assets – cache-first + nice SVG fallback
+  // 5. Images & comic assets – cache-first + nice SVG fallback (unchanged)
   const isImageRequest =
     event.request.destination === 'image' ||
     url.hostname.includes('myfilebase.com') ||
@@ -180,8 +181,14 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // 6. General fallback: network-first → cache
+  // 6. General network-first → cache on success (critical fix)
   event.respondWith(
-    fetch(event.request).catch(() => caches.match(event.request))
+    fetch(event.request).then(async (response) => {
+      if (response && response.ok) {
+        const cache = await caches.open(DYNAMIC_CACHE);
+        cache.put(event.request, response.clone());
+      }
+      return response;
+    }).catch(() => caches.match(event.request))
   );
 });

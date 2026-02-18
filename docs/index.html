@@ -8,7 +8,8 @@
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#ef4444">
     
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <!-- PINNED lucide for reliable caching -->
+    <script src="https://unpkg.com/lucide@0.574.0/dist/umd/lucide.min.js"></script>
     
     <style>
         :root {
@@ -642,7 +643,7 @@
                         </div>
                         <div class="message-content">
                             <div class="username">${m.username || 'Unknown'}</div>
-                            <div style="font-size:0.96rem; line-height:1.35; padding-bottom:15px;">${m.text || ''}</div>
+                            <div class="message-text" style="font-size:0.96rem; line-height:1.35; padding-bottom:15px;"></div>
                             ${createAttachmentHTML(m.attachment)}
                             <button class="share-btn" onclick="handleShareClick(this, ${i}, '${uniqueId}')">
                                 <i data-lucide="zap" width="14" height="14"></i>
@@ -651,6 +652,10 @@
                         </div>
                     </div>
                 `;
+
+                // SAFE text insertion – prevents XSS even if the GitHub JSON is ever compromised
+                msgDiv.querySelector('.message-text').textContent = m.text || '';
+
                 fragment.appendChild(msgDiv);
             });
 
