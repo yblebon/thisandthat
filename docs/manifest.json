@@ -4,10 +4,8 @@
   "description": "Read chat conversations as comic-style timelines",
   "start_url": "/",
   "display": "standalone",
-  "display_override": ["standalone", "minimal-ui"],
   "background_color": "#fafaf9",
   "theme_color": "#ef4444",
-  "orientation": "any",
   "icons": [
     {
       "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNlZjQ0NDQiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBjbGFzcz0ibHVjaWRlIGx1Y2lkZS1ib29rLW9wZW4iPjxwYXRoIGQ9Ik0yIDZoMTh2MTRhMiAyIDAgMCAxLTIgMkg0YTIgMiAwIDAgMS0yLTJWNmoiPjwvcGF0aD48cGF0aCBkPSJNMiAzIDE4IDMiPjwvcGF0aD48cGF0aCBkPSJNMiAxOSAxOCA5Ij48L3BhdGg+PC9zdmc+",
