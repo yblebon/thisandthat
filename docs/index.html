@@ -491,7 +491,7 @@
         lucide.createIcons();
 
         let storiesData = [];
-        let currentMessages = []; // Track active messages to avoid HTML string breaks
+        let currentMessages = [];
         let activeFilter = null;
         const contentPanel = document.getElementById('content-panel');
         const sidebar = document.getElementById('sidebar');
@@ -540,13 +540,38 @@
             if (!attach || !attach.type || !attach.url) return '';
             const type = attach.type.toLowerCase();
             const wrap = "margin-top:10px; border:3px solid var(--border-color); border-radius:8px; overflow:hidden;";
-            if (type === 'video') return `<div style="${wrap}"><video controls style="width:100%; display:block;" src="${attach.url}"></video></div>`;
-            if (type === 'image') return `<div style="${wrap}"><img src="${attach.url}" style="width:100%; display:block;" loading="lazy" decoding="async"></div>`;
-            if (type === 'audio') return `<div style="margin-top:10px;"><audio controls style="width:100%;" src="${attach.url}"></audio></div>`;
+
+            if (type === 'video') {
+                return `<div style="${wrap}"><video controls style="width:100%; display:block;" src="${attach.url}"></video></div>`;
+            }
+            if (type === 'image') {
+                return `<div style="${wrap}"><img src="${attach.url}" style="width:100%; display:block;" loading="lazy" decoding="async"></div>`;
+            }
+            if (type === 'audio') {
+                return `<div style="margin-top:10px;"><audio controls style="width:100%;" src="${attach.url}"></audio></div>`;
+            }
+            if (type === 'youtube') {
+                // Robust YouTube ID extraction (handles all your test cases)
+                const youtubeRegex = /(?:youtube(?:-nocookie)?\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+                const match = attach.url.match(youtubeRegex);
+                const videoId = match ? match[1] : null;
+
+                if (!videoId) {
+                    return `<div style="margin-top:10px; padding:12px; background:#fff;"><a href="${attach.url}" target="_blank" style="color:var(--accent-red); font-weight:900;">🎥 Watch on YouTube →</a></div>`;
+                }
+
+                return `<div style="${wrap} position:relative; padding-bottom:56.25%; height:0;">
+                    <iframe style="position:absolute; top:0; left:0; width:100%; height:100%; border:none;" 
+                            src="https://www.youtube.com/embed/${videoId}" 
+                            frameborder="0" 
+                            allowfullscreen 
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
+                    </iframe>
+                </div>`;
+            }
             return '';
         }
 
-        // New helper to bridge the button click and share logic
         function handleShareClick(btn, msgIndex, uniqueId) {
             const m = currentMessages[msgIndex];
             if (m) shareMessage(btn, m, uniqueId);
@@ -566,7 +591,7 @@
                         sender: m.sender,
                         timestamp: m.timestamp,
                         username: m.username,
-                        photoUrl: `https://via.placeholder.com/40?text=${m.username || 'User'}`,
+                        photoUrl: `https://via.placeholder.com/40?text=${encodeURIComponent(m.username || 'User')}`,
                         attachment: m.attachment
                     })
                 });
@@ -577,6 +602,8 @@
                     btn.style.background = "#4ade80"; 
                     btn.innerHTML = '<i data-lucide="check" width="14" height="14"></i> COPIED!';
                     lucide.createIcons();
+                } else {
+                    throw new Error('Share API failed');
                 }
             } catch (err) {
                 console.error("Share failed", err);
@@ -593,7 +620,7 @@
 
         function loadStory(index) {
             const story = storiesData[index];
-            currentMessages = story.messages; // Set current story messages
+            currentMessages = story.messages;
             const container = document.getElementById('active-timeline-container');
             const legend = document.getElementById('character-legend');
             
@@ -653,7 +680,6 @@
                     </div>
                 `;
 
-                // SAFE text insertion – prevents XSS even if the GitHub JSON is ever compromised
                 msgDiv.querySelector('.message-text').textContent = m.text || '';
 
                 fragment.appendChild(msgDiv);
