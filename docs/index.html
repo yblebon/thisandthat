@@ -8,7 +8,6 @@
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#ef4444">
     
-    <!-- PINNED lucide for reliable caching -->
     <script src="https://unpkg.com/lucide@0.574.0/dist/umd/lucide.min.js"></script>
     
     <style>
@@ -551,7 +550,6 @@
                 return `<div style="margin-top:10px;"><audio controls style="width:100%;" src="${attach.url}"></audio></div>`;
             }
             if (type === 'youtube') {
-                // Robust YouTube ID extraction (handles all your test cases)
                 const youtubeRegex = /(?:youtube(?:-nocookie)?\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
                 const match = attach.url.match(youtubeRegex);
                 const videoId = match ? match[1] : null;
@@ -572,25 +570,27 @@
             return '';
         }
 
-        function handleShareClick(btn, msgIndex, uniqueId) {
+        // Updated for safety: We use a simple index and ID, but the actual data is pulled from the JavaScript array
+        function handleShareClick(btn, msgIndex) {
             const m = currentMessages[msgIndex];
-            if (m) shareMessage(btn, m, uniqueId);
+            if (m) shareMessage(btn, m);
         }
 
-        async function shareMessage(btn, m, uniqueId) {
+        async function shareMessage(btn, m) {
             const originalHTML = btn.innerHTML;
             btn.innerHTML = 'Wait...';
             btn.disabled = true;
 
             try {
+                // We send the data as a pure JSON object. No raw string injection into attributes.
                 const response = await fetch('https://content-sharer-ten.vercel.app/api/share', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         text: m.text,
-                        sender: m.sender,
-                        timestamp: m.timestamp,
-                        username: m.username,
+                        sender: (m.sender === 'me' || m.sender === 'right') ? 'right' : 'left',
+                        timestamp: m.timestamp || new Date().toLocaleString(),
+                        username: m.username || 'User',
                         photoUrl: `https://via.placeholder.com/40?text=${encodeURIComponent(m.username || 'User')}`,
                         attachment: m.attachment
                     })
@@ -658,9 +658,7 @@
                 msgDiv.className = `message ${sideClass}`;
                 msgDiv.dataset.author = m.username || 'Unknown';
                 
-                const storyId = story.name.toLowerCase().replace(/\s+/g, '-');
-                const uniqueId = `${storyId}-${i}`;
-
+                // Note: uniqueId is removed from function call to avoid quote syntax errors in HTML attributes
                 msgDiv.innerHTML = `
                     <div class="dialog-date">${m.timestamp || 'STORY START'}</div>
                     <div class="message-body">
@@ -672,7 +670,7 @@
                             <div class="username">${m.username || 'Unknown'}</div>
                             <div class="message-text" style="font-size:0.96rem; line-height:1.35; padding-bottom:15px;"></div>
                             ${createAttachmentHTML(m.attachment)}
-                            <button class="share-btn" onclick="handleShareClick(this, ${i}, '${uniqueId}')">
+                            <button class="share-btn" onclick="handleShareClick(this, ${i})">
                                 <i data-lucide="zap" width="14" height="14"></i>
                                 SHARE!
                             </button>
@@ -680,6 +678,7 @@
                     </div>
                 `;
 
+                // CRITICAL FIX: Always use .textContent to set user text to prevent XSS and quote breakage
                 msgDiv.querySelector('.message-text').textContent = m.text || '';
 
                 fragment.appendChild(msgDiv);
@@ -707,7 +706,8 @@
                 storiesData.forEach((story, index) => {
                     const div = document.createElement('div');
                     div.className = 'story-item';
-                    div.innerHTML = `<i data-lucide="book-open" width="20" height="20"></i> ${story.name || 'Unnamed Story'}`;
+                    div.innerHTML = `<i data-lucide="book-open" width="20" height="20"></i> <span></span>`;
+                    div.querySelector('span').textContent = story.name || 'Unnamed Story';
                     div.onclick = () => loadStory(index);
                     sidebarContent.appendChild(div);
                 });
