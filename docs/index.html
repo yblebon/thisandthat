@@ -694,7 +694,7 @@
 
         async function init() {
             try {
-                const res = await fetch('https://raw.githubusercontent.com/yblebon/datasources/refs/heads/main/conversations.json', {
+                const res = await fetch('https://static-conf.vercel.app/go/this-and-that', {
                     headers: { 'Accept': 'application/json; charset=utf-8' }
                 });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
